@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Profils — Baie de Banyuls</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root{
+      --bg:#f8fafc; --text:#1e293b; --muted:#475569;
+      --link:#2563eb; --link-hover:#1d4ed8;
+      --border:#cbd5e1; --card:#ffffff;
+      --pill:#e2e8f0; --pill-active:#2563eb; --pill-active-text:#fff;
+    }
+    body{
+      margin:0; padding:24px; background:var(--bg); color:var(--text);
+      font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu;
+    }
+    h1{ margin:0 0 8px; font-size:22px; color:var(--text); }
+    .sub{ margin:0 0 12px; color:var(--muted); }
+
+    /* Menu principal */
+    .nav-links{
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      margin:10px 0 10px; font-size:14px; color:var(--muted);
+    }
+    .nav-links a{ color:var(--link); text-decoration:none; transition:color .2s; }
+    .nav-links a:hover{ color:var(--link-hover); text-decoration:underline; }
+    .nav-links span{ color:rgba(0,0,0,.25); user-select:none; }
+
+    /* Sous-menu des variables */
+    .subnav{
+      display:flex; gap:8px; flex-wrap:wrap; margin:18px 0;
+    }
+    .subnav a{
+      display:inline-block; padding:6px 10px; border:1px solid var(--border);
+      border-radius:999px; background:var(--pill); color:#0f172a;
+      font-size:13px; text-decoration:none; transition:all .15s ease;
+    }
+    .subnav a:hover{ filter:brightness(0.97); }
+    .subnav a.active{
+      background:var(--pill-active); color:var(--pill-active-text);
+      border-color:var(--pill-active);
+    }
+
+    /* Alertes */
+    .errors{
+      background:#fff0f0; color:#991b1b; border:1px solid #fecaca;
+      border-radius:10px; padding:10px 12px; margin:10px 0 16px; font-size:13px;
+    }
+
+    /* Conteneur Plotly */
+    #profilesPlot{
+      width:100%; max-width:1100px; height:560px; margin:12vh auto 0;
+      background:var(--card) !important; border:1px solid var(--border); border-radius:6px;
+    }
+  .btn-group { display:flex; justify-content: center; gap:8px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+  .btn { padding:6px 12px; border:1px solid #cbd5e1; border-radius:6px; background:#fff;
+         color:#1e293b; text-decoration:none; font:500 14px/1 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;
+         transition:background .15s,border-color .15s; }
+  .btn:hover { background:#f1f5f9; border-color:#94a3b8; }
+  .btn.is-primary { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .btn.is-primary:hover { background:#1d4ed8; border-color:#1d4ed8; }
+  .btn-group .label { color:#475569; font-size:14px; margin-right:4px; }
+  </style>
+</head>
+<body>
+  <h1>Profils — Baie de Banyuls</h1>
+  <p class="sub">Profils verticaux pour les quatre stations (Nord, Est, Sud, Ouest).</p>
+
+<!-- Menu principal -->
+<nav class="nav-links">
+  <a href="{% url 'coords' %}">Coordonnées</a>
+  <span>·</span>
+  <a href="{% url 'profiles' 'density' %}">Profils</a>
+  <span>·</span>
+  <a href="{% url 'velocity' %}">Profils de vitesse</a>
+  <span>·</span>
+  <a href="{% url 'vectors' %}">Vecteurs</a>
+  <span>·</span>
+  <a href="{% url 'ekman' %}">Ekman</a>
+</nav>
+
+<!-- Sous-menu variable -->
+<nav class="subnav">
+  {% with av=active_var|default:"density" %}
+    <a href="{% url 'profiles' 'density' %}" class="{% if av == 'density' %}active{% endif %}">Densité</a>
+    <a href="{% url 'profiles' 'salinity' %}" class="{% if av == 'salinity' %}active{% endif %}">Salinité</a>
+    <a href="{% url 'profiles' 'temperature' %}" class="{% if av == 'temperature' %}active{% endif %}">Température</a>
+  {% endwith %}
+</nav>
+
+  {% if errors and errors|length %}
+    <div class="errors">
+      <strong>Erreurs :</strong>
+      <ul style="margin:6px 0 0 18px; padding:0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div id="profilesPlot"></div>
+
+<div class="btn-group">
+  <a class="btn"
+     href="{% url 'export_figure' 'profiles_'|add:active_var %}?format=png&width=1400&height=900&dpi=150"
+     download>
+    PNG
+  </a>
+  <a class="btn"
+     href="{% url 'export_figure' 'profiles_'|add:active_var %}?format=svg&width=1200&height=800"
+     download>
+    SVG
+  </a>
+  <a class="btn"
+     href="{% url 'export_figure' 'profiles_'|add:active_var %}?format=pdf&width=1200&height=800"
+     download>
+    PDF
+  </a>
+</div>
+
+  <script>
+    // Données & état
+    const stations = {{ stations_series_json|safe }};
+    const activeVar = "{{ active_var|default:'density' }}";
+
+    // Libellés & unités
+    const axisLabel = {
+      density: "Densité (kg/m³)",
+      salinity: "Salinité (PSU)",
+      temperature: "Température (°C)"
+    };
+    const titleMap = {
+      density: "Profils de densité",
+      salinity: "Profils de salinité",
+      temperature: "Profils de température"
+    };
+
+    // Couleurs par station
+    const colors = { nord:"#3b82f6", est:"#10b981", sud:"#f59e0b", ouest:"#ef4444" };
+
+    // Construit les traces pour la variable demandée,
+    // en ignorant les stations qui n'ont pas cette variable.
+    const traces = [];
+    for (const [name, data] of Object.entries(stations)) {
+      if (!data.depth || !data[activeVar]) continue;
+      if (!Array.isArray(data.depth) || !Array.isArray(data[activeVar])) continue;
+      if (data.depth.length !== data[activeVar].length) continue;
+
+      traces.push({
+        x: data[activeVar],
+        y: data.depth,
+        mode: "lines",
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        line: { color: colors[name] || "#64748b", width: 2 },
+        hovertemplate:
+          `${name}<br>${axisLabel[activeVar].split(" (")[0]} = %{x:.3f}`+
+          `<br>z = %{y:.0f} m<extra></extra>`
+      });
+    }
+
+    const layout = {
+      title: titleMap[activeVar] || "Profils",
+      paper_bgcolor: '#ffffff',
+      plot_bgcolor:  '#ffffff',
+      font: { color: '#1e293b' },
+      xaxis: {
+        title: axisLabel[activeVar] || "",
+        gridcolor: "#e2e8f0",
+        zeroline: true, zerolinecolor: "#94a3b8"
+      },
+      yaxis: {
+        title: "Profondeur (m)",
+        autorange: "reversed",
+        gridcolor: "#e2e8f0",
+        zeroline: true, zerolinecolor: "#94a3b8"
+      },
+      legend: { bgcolor: "rgba(255,255,255,0)" },
+      margin: { l:70, r:20, t:60, b:60 }
+    };
+
+    if (traces.length) {
+      Plotly.newPlot("profilesPlot", traces, layout, {
+        responsive:true,
+        displayModeBar:false,
+        displaylogo:false
+      });
+    } else {
+      document.getElementById("profilesPlot").innerHTML =
+        '<p style="color:#64748b; text-align:center; margin-top:20px">Aucune donnée disponible pour cette variable.</p>';
+    }
+  </script>
+</body>
+</html>

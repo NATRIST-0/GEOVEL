@@ -1,0 +1,8 @@
+cd C:\Users\GAYRARD\Documents\GitHub\GEOVEL\01_code
+python -m PyQt6.uic.pyuic ui/ui_mainwindow.ui -o code/ui_mainwindow.py
+pyrcc5 resources.qrc -o resources.py
+
+cd C:\Users\GAYRARD\Documents\GitHub\GEOVEL\04_archives\3d_visualization
+python manage.py check
+python manage.py runserver
+http://127.0.0.1:8000/coords/

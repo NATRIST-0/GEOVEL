@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Géostrophie — Flèches (u,v) par niveau</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+  :root{
+    --bg:#f8fafc;         /* fond très clair */
+    --text:#1e293b;       /* texte principal */
+    --muted:#475569;      /* texte secondaire */
+    --link:#2563eb;       /* liens */
+    --link-hover:#1d4ed8;
+    --border:#cbd5e1;     /* bordures */
+    --card:#ffffff;       /* panneaux / cartes */
+  }
+  *{ box-sizing:border-box; }
+
+  body{
+    height:100vh; margin:0; padding:24px;
+    background:var(--bg);
+    color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
+  }
+  h1{ margin:0 0 6px; font-size:22px; color:var(--text); }
+  .sub{ margin:0 0 14px; color:var(--muted); }
+
+  .errors{
+    background:#fff0f0; color:#991b1b; border:1px solid #fecaca;
+    border-radius:10px; padding:10px 12px; margin:10px 0 16px; font-size:13px;
+  }
+
+  /* Conteneur du tracé */
+  #vecPlot{
+    width:75%; height:540px; margin:12vh auto 0 auto;
+    background:var(--card) !important;
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+
+  /* Menu liant les pages */
+  .nav-links{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    margin-bottom:16px; font-size:14px; color:var(--muted);
+  }
+  .nav-links a{ color:var(--link); text-decoration:none; transition:color .2s; }
+  .nav-links a:hover{ color:var(--link-hover); text-decoration:underline; }
+  .nav-links span{ color:rgba(0,0,0,.25); user-select:none; }
+
+  /* Formulaire z_ref */
+  form#zrefForm{
+    margin:12px 0 18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    font-size:14px; color:var(--muted);
+  }
+  form#zrefForm input[type=number]{
+    width:80px; padding:4px 6px;
+    border:1px solid var(--border); border-radius:6px;
+    background:var(--card); color:var(--text);
+  }
+  form#zrefForm button{
+    padding:5px 10px; border:1px solid var(--border); border-radius:6px;
+    background:var(--link); color:#fff; cursor:pointer; font-weight:500;
+  }
+  form#zrefForm button:hover{ background:var(--link-hover); }
+  .btn-group { display:flex; justify-content: center; gap:8px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+  .btn { padding:6px 12px; border:1px solid #cbd5e1; border-radius:6px; background:#fff;
+         color:#1e293b; text-decoration:none; font:500 14px/1 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;
+         transition:background .15s,border-color .15s; }
+  .btn:hover { background:#f1f5f9; border-color:#94a3b8; }
+  .btn.is-primary { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .btn.is-primary:hover { background:#1d4ed8; border-color:#1d4ed8; }
+  .btn-group .label { color:#475569; font-size:14px; margin-right:4px; }
+</style>
+</head>
+<body>
+<h1>Flèches géostrophiques (u,v) par niveau</h1>
+
+<p class="sub">
+  Vecteurs depuis l’origine en <strong>cm/s</strong> —
+  référence actuelle : <code>z_ref = {{ z_ref }}</code> m
+</p>
+
+<!-- Menu principal -->
+<nav class="nav-links">
+  <a href="{% url 'coords' %}">Coordonnées</a>
+  <span>·</span>
+  <a href="{% url 'profiles' 'density' %}">Profils</a>
+  <span>·</span>
+  <a href="{% url 'velocity' %}">Profils de vitesse</a>
+  <span>·</span>
+  <a href="{% url 'vectors' %}">Vecteurs</a>
+  <span>·</span>
+  <a href="{% url 'ekman' %}">Ekman</a>
+</nav>
+
+{% if errors and errors|length %}
+  <div class="errors">
+    <strong>Erreurs :</strong>
+    <ul style="margin:6px 0 0 18px; padding:0">
+      {% for e in errors %}
+        <li>{{ e }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+<!-- Petit formulaire GET -->
+<form id="zrefForm" method="get" action="">
+  <label for="z_ref">Profondeur de référence (z_ref, m) :</label>
+  <input type="number" id="z_ref" name="z_ref" value="{{ z_ref|floatformat:0 }}" step="1" min="0" max="500" />
+  <button type="submit">Mettre à jour</button>
+</form>
+
+<div id="vecPlot"></div>
+
+<div class="btn-group">
+  <a class="btn"
+     href="{% url 'export_figure' 'vectors' %}?format=png&width=1200&height=900&dpi=150&z_ref={{ z_ref }}">
+    PNG
+  </a>
+  <a class="btn"
+     href="{% url 'export_figure' 'vectors' %}?format=svg&width=1200&height=800&z_ref={{ z_ref }}">
+    SVG
+  </a>
+  <a class="btn"
+     href="{% url 'export_figure' 'vectors' %}?format=pdf&width=1200&height=800&z_ref={{ z_ref }}">
+    PDF
+  </a>
+</div>
+
+<script>
+  // Données envoyées par la vue Django
+  const z    = {{ z_json|safe }};          // profondeurs (m) — positives
+  const u    = {{ u_json|safe }};          // m/s
+  const v    = {{ v_json|safe }};          // m/s
+  const zRef = {{ z_ref|default:"null" }};
+
+  // Fonction utilitaire pour segments (0,0)->(u_i, v_i)
+  function buildLineSegments(u_cm, v_cm) {
+    const xs = [], ys = [];
+    for (let i = 0; i < u_cm.length; i++) {
+      xs.push(0, u_cm[i], null);
+      ys.push(0, v_cm[i], null);
+    }
+    return { x: xs, y: ys };
+  }
+
+  // Gestion absence de données
+  if (!u.length || !v.length || u.length !== v.length || !z.length) {
+    document.getElementById("vecPlot").innerHTML =
+      '<div style="color:#94a3b8">Données indisponibles.</div>';
+  } else {
+    // Conversion en cm/s pour l’affichage
+    const u_cm = u.map(val => val * 100);
+    const v_cm = v.map(val => val * 100);
+
+    // Amplitude max pour cadrer les axes (symétriques) en cm/s
+    const umax = Math.max(...u_cm.map(Math.abs));
+    const vmax = Math.max(...v_cm.map(Math.abs));
+    const axisMax = Math.max(10, Math.ceil(Math.max(umax, vmax) / 5) * 5);
+
+    // --- Préparation colorbar avec 0 m en haut ---
+    // On colore avec -z (négatif) pour que 0 soit en haut visuellement.
+    const zneg = z.map(val => -val);
+
+    // Ticks de colorbar : 0, 10, 20, ... zmax (adapte le pas si besoin)
+    const zmax = Math.max(...z);
+    const step = zmax <= 40 ? 5 : 10; // pas intelligent : 5m si peu profond, sinon 10m
+    const ticks = [];
+    for (let t = 0; t <= zmax; t += step) ticks.push(t);
+    const tickvals = ticks.map(t => -t);     // positions (négatives, haut→bas)
+    const ticktext = ticks.map(t => String(t)); // labels affichés (positifs)
+
+    // Segments depuis l’origine
+    const seg = buildLineSegments(u_cm, v_cm);
+    const segTrace = {
+      x: seg.x, y: seg.y, mode: "lines",
+      line: { width: 1.5, color: "rgba(100,100,100,0.6)" },
+      hoverinfo: "skip",
+      showlegend: false
+    };
+
+    // Nuage de points coloré par -z ; hover affiche la vraie profondeur +z
+    const ptsTrace = {
+      x: u_cm,
+      y: v_cm,
+      mode: "markers",
+      marker: {
+        size: 7,
+        color: zneg,                 // ← coloration avec -z
+        colorscale: "Viridis",
+        colorbar: {
+          title: "z (m)",
+          tickmode: "array",
+          tickvals: tickvals,        // ← 0 en haut, zmax en bas
+          ticktext: ticktext
+        }
+      },
+      customdata: z,                 // ← vraie profondeur pour le hover
+      hovertemplate:
+        "u=%{x:.2f} cm/s<br>v=%{y:.2f} cm/s<br>z=%{customdata:.0f} m<extra></extra>",
+      showlegend: false
+    };
+
+    const layout = {
+      paper_bgcolor:'#ffffff',
+      plot_bgcolor:'#ffffff',
+      font:{ color:'#1e293b' },
+      xaxis:{
+        title:"u (cm/s)",
+        range:[-axisMax, axisMax],
+        zeroline:true, zerolinecolor:"#94a3b8",
+        gridcolor:"#e2e8f0"
+      },
+      yaxis:{
+        title:"v (cm/s)",
+        range:[-axisMax, axisMax],
+        zeroline:true, zerolinecolor:"#94a3b8",
+        gridcolor:"#e2e8f0",
+        scaleanchor:"x", scaleratio:1
+      },
+      margin:{ l:70, r:20, t:8, b:60 }
+    };
+
+    Plotly.newPlot(
+      "vecPlot",
+      [segTrace, ptsTrace],
+      layout,
+      { responsive: true, displayModeBar: false, displaylogo: false }
+    );
+  }
+</script>
+</body>
+</html>

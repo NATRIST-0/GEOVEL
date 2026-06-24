@@ -1,0 +1,43 @@
+# Caches et artefacts Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+ENV/
+
+# Fichiers locaux macOS et IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Artefacts locaux Django
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+
+# Journaux et fichiers temporaires
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Répertoires de figures et exports générés
+exports/
+figures/

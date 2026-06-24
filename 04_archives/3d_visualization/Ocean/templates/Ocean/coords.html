@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Coordonnées & barycentre — Banyuls</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+  :root{
+    --bg:#f8fafc;         /* fond très clair */
+    --text:#1e293b;       /* texte principal */
+    --muted:#475569;      /* texte secondaire */
+    --link:#2563eb;       /* liens */
+    --link-hover:#1d4ed8;
+    --border:#cbd5e1;     /* bordures */
+    --card:#ffffff;       /* panneaux / cartes */
+  }
+
+  body{
+    margin:0; padding:24px;
+    background:var(--bg);
+    color:var(--text);
+    font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu;
+  }
+  h1{ margin:0 0 6px; font-size:22px; color:var(--text); }
+  .sub{ margin:0 0 12px; color:var(--muted); }
+
+  /* Menu harmonisé */
+  .nav-links{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    margin:10px 0 18px; font-size:14px; color:var(--muted);
+  }
+  .nav-links a{ color:var(--link); text-decoration:none; transition:color .2s; }
+  .nav-links a:hover{ color:var(--link-hover); text-decoration:underline; }
+  .nav-links span{ color:rgba(0,0,0,.25); user-select:none; }
+
+  /* Bloc d’erreurs */
+  .errors{
+    background:#fff0f0; color:#991b1b; border:1px solid #fecaca;
+    border-radius:10px; padding:10px 12px; margin:10px 0 16px; font-size:13px;
+  }
+
+  /* Zone de la carte Plotly */
+  #map{
+    width:75%; height:540px; margin:12vh auto 0 auto;
+    background:var(--card) !important;
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+
+  /* Informations du barycentre */
+  .meta{
+    width: 75%; margin:10px auto; color:var(--muted); font-size:14px;
+  }
+
+  /* Petites pastilles d’information */
+  .pill{
+    display:inline-block; padding:2px 8px;
+    border:1px solid var(--border); border-radius:999px;
+    margin-right:6px;
+    background:var(--card); color:var(--muted);
+  }
+  .btn-group { display:flex; justify-content: center; gap:8px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+  .btn { padding:6px 12px; border:1px solid #cbd5e1; border-radius:6px; background:#fff;
+         color:#1e293b; text-decoration:none; font:500 14px/1 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;
+         transition:background .15s,border-color .15s; }
+  .btn:hover { background:#f1f5f9; border-color:#94a3b8; }
+  .btn.is-primary { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .btn.is-primary:hover { background:#1d4ed8; border-color:#1d4ed8; }
+  .btn-group .label { color:#475569; font-size:14px; margin-right:4px; }
+</style>
+</head>
+<body>
+  <h1>Coordonnées des stations & barycentre</h1>
+  <p class="sub">Repère local en <strong>mètres</strong>, origine = barycentre.</p>
+
+<!-- Menu principal -->
+<nav class="nav-links">
+  <a href="{% url 'coords' %}">Coordonnées</a>
+  <span>·</span>
+  <a href="{% url 'profiles' 'density' %}">Profils</a>
+  <span>·</span>
+  <a href="{% url 'velocity' %}">Profils de vitesse</a>
+  <span>·</span>
+  <a href="{% url 'vectors' %}">Vecteurs</a>
+  <span>·</span>
+  <a href="{% url 'ekman' %}">Ekman</a>
+</nav>
+
+  {% if errors and errors|length %}
+    <div class="errors">
+      <strong>Erreurs :</strong>
+      <ul style="margin:6px 0 0 18px; padding:0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div id="map"></div>
+
+  <div class="meta" id="meta"></div>
+
+<div class="btn-group">
+  <a class="btn"
+     href="{% url 'export_figure' 'coords' %}?format=png&width=1400&height=900&dpi=150"
+     download>
+    PNG
+  </a>
+  <a class="btn"
+     href="{% url 'export_figure' 'coords' %}?format=svg&width=1200&height=800"
+     download>
+    SVG
+  </a>
+  <a class="btn"
+     href="{% url 'export_figure' 'coords' %}?format=pdf&width=1200&height=800"
+     download>
+    PDF
+  </a>
+</div>
+
+  <script>
+    const xy = {{ xy_json|safe }};      // {nord:[x,y], est:[x,y], ...} en mètres
+    const meta = {{ meta_json|safe }};  // {lat0,lon0,kx,ky}
+
+    const colors = { nord:"#3b82f6", est:"#10b981", sud:"#f59e0b", ouest:"#ef4444" };
+
+    // Construit les traces : points stations + barycentre
+    const names = Object.keys(xy);
+    const xs = names.map(n => xy[n][0]);
+    const ys = names.map(n => xy[n][1]);
+    const labs = names.map(n => n.charAt(0).toUpperCase() + n.slice(1));
+
+    const stationsTrace = {
+      type: "scatter",
+      x: xs,
+      y: ys,
+      mode: "markers+text",
+      text: labs,
+      textposition: "top center",
+      marker: {
+        size: 10,
+        color: names.map(n => colors[n] || "#ddd"),
+        line: { width: 1, color: "rgba(255,255,255,.6)" }
+      },
+      name: "Stations",
+      hovertemplate: "%{text}<br>x=%{x:.1f} m<br>y=%{y:.1f} m<extra></extra>"
+    };
+
+    const centerTrace = {
+      type: "scatter",
+      x: [0],
+      y: [0],
+      mode: "markers+text",
+      text: ["Barycentre"],
+      textposition: "bottom center",
+      marker: { size: 12, color: "#eab308", symbol: "diamond" },
+      name: "Barycentre",
+      hovertemplate: "Barycentre<br>x=0 m<br>y=0 m<extra></extra>"
+    };
+
+    // Détermine une fenêtre d’affichage avec marges
+    const allX = xs.concat([0]);
+    const allY = ys.concat([0]);
+    const pad = 0.15;
+    const xmin = Math.min(...allX), xmax = Math.max(...allX);
+    const ymin = Math.min(...allY), ymax = Math.max(...allY);
+    const xrange = xmax - xmin || 10;
+    const yrange = ymax - ymin || 10;
+
+    const layout = {
+      title: "Plan des stations (repère local en mètres)",
+      paper_bgcolor:'#ffffff',
+      plot_bgcolor:'#ffffff',
+      font:{ color:'#1e293b' },
+      xaxis:{
+        title:"x (m, Est +)",
+        gridcolor:"#e2e8f0",
+        zeroline:true, zerolinecolor:"#94a3b8"
+      },
+      yaxis:{
+        title:"y (m, Nord +)",
+        gridcolor:"#e2e8f0",
+        zeroline:true, zerolinecolor:"#94a3b8",
+        scaleanchor:"x", scaleratio:1
+      },
+      margin:{ l:70, r:20, t:60, b:60 },
+      legend:{ bgcolor:"rgba(255,255,255,0)" },
+      shapes:[
+        { type:"line", x0:xmin-pad*xrange, x1:xmax+pad*xrange, y0:0, y1:0, line:{ color:"#94a3b8", width:1 } },
+        { type:"line", x0:0, x1:0, y0:ymin-pad*yrange, y1:ymax+pad*yrange, line:{ color:"#94a3b8", width:1 } }
+      ]
+    };
+
+    Plotly.newPlot("map", [stationsTrace, centerTrace], layout, {
+      responsive: true, displayModeBar: false, displaylogo: false
+    });
+
+    // Infos barycentre + conversions
+    const info = [];
+
+    if (meta && typeof meta.lat0 !== "undefined" && typeof meta.lon0 !== "undefined") {
+      info.push(`<span class="pill" title="Latitude du barycentre des stations">lat₀ = ${(+meta.lat0).toFixed(5)}°</span>`);
+      info.push(`<span class="pill" title="Longitude du barycentre des stations">lon₀ = ${(+meta.lon0).toFixed(5)}°</span>`);
+    }
+
+    if (meta && typeof meta.kx !== "undefined" && typeof meta.ky !== "undefined") {
+      info.push(`<span class="pill" title="Conversion locale des degrés de longitude en mètres">m/deg lon ≈ ${(+meta.kx).toFixed(1)}</span>`);
+      info.push(`<span class="pill" title="Conversion des degrés de latitude en mètres">m/deg lat ≈ ${(+meta.ky).toFixed(1)}</span>`);
+    }
+
+    document.getElementById("meta").innerHTML = info.join(" ");
+  </script>
+</body>
+</html>

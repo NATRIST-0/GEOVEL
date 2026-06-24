@@ -1,0 +1,12 @@
+file_1=C:/Users/GAYRARD/Documents/GitHub/GEOVEL/02_data/sea_bird_data/north.cnv
+lat_1=42.491
+lon_1=03.188
+file_2=C:/Users/GAYRARD/Documents/GitHub/GEOVEL/02_data/sea_bird_data/south.cnv
+lat_2=42.475
+lon_2=03.187
+file_3=C:/Users/GAYRARD/Documents/GitHub/GEOVEL/02_data/sea_bird_data/east.cnv
+lat_3=42.483
+lon_3=03.201
+file_4=C:/Users/GAYRARD/Documents/GitHub/GEOVEL/02_data/sea_bird_data/west.cnv
+lat_4=42.483
+lon_4=03.177

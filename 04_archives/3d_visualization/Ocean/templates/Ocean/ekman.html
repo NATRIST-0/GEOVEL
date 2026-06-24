@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Vent → Courant d’Ekman (surface)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+  :root{
+    --bg:#f8fafc;         /* fond très clair */
+    --text:#1e293b;       /* texte principal (gris anthracite) */
+    --muted:#475569;      /* texte secondaire */
+    --link:#2563eb;       /* liens */
+    --link-hover:#1d4ed8;
+    --border:#cbd5e1;     /* bordures / cadres */
+    --card:#ffffff;       /* cartes / panneaux */
+  }
+
+  /* Page */
+  body{
+    margin:0; padding:24px;
+    background:var(--bg);
+    color:var(--text);
+    font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu;
+  }
+  h1{ margin:0 0 8px; font-size:22px; color:var(--text); }
+  .sub{ margin:0 0 12px; color:var(--muted); }
+
+  /* Menu harmonisé */
+  .nav-links{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    margin:10px 0 18px; font-size:14px; color:var(--muted);
+  }
+  .nav-links a{ color:var(--link); text-decoration:none; transition:color .2s; }
+  .nav-links a:hover{ color:var(--link-hover); text-decoration:underline; }
+  .nav-links span{ color:rgba(0,0,0,.25); user-select:none; }
+
+  /* Formulaire */
+  form#windForm{
+    margin:10px 0 18px;
+    display:grid; gap:12px;
+    grid-template-columns:repeat(8, minmax(0, 150px));
+  }
+  @media (max-width:1000px){
+    form#windForm{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  }
+  form#windForm label{
+    height:20px; font-size:12px; color:var(--muted); display:block; margin-bottom:4px;
+  }
+  form#windForm input{
+    width:90%; padding:6px 8px;
+    border:1px solid var(--border); border-radius:6px;
+    background:var(--card); color:var(--text);
+  }
+  form#windForm button{
+    grid-column:span 2;
+    padding:8px 10px; border:1px solid var(--border); border-radius:6px;
+    background:var(--link); color:#fff; cursor:pointer; font-weight:500;
+  }
+  form#windForm button:hover{ background:var(--link-hover); }
+
+  /* Alertes */
+  .errors{
+    background:#fff0f0; color:#991b1b; border:1px solid #fecaca;
+    border-radius:10px; padding:10px 12px; margin:10px 0 16px; font-size:13px;
+  }
+
+  /* Grille des deux graphes */
+  .grid{
+    display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:20px;
+  }
+  @media (max-width:900px){ .grid{ grid-template-columns:1fr; } }
+
+  /* Conteneurs Plotly */
+  #windPlot, #ekmanPlot{
+    width:100%; height:460px; margin:12vh auto 0 auto;
+    background:var(--card) !important;
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+
+  /* Infos */
+  .info{ margin-top:10px; color:var(--muted); font-size:14px; }
+  .pill{
+    display:inline-block; padding:2px 8px; border:1px solid var(--border);
+    border-radius:999px; margin-right:6px; background:var(--card); color:var(--muted);
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+  <h1>Vent → courant d’Ekman (surface)</h1>
+  <p class="sub">Modèle analytique simple : tension du vent, Coriolis, viscosité turbulente (HN → déviation à droite).</p>
+
+<!-- Menu principal -->
+<nav class="nav-links">
+  <a href="{% url 'coords' %}">Coordonnées</a>
+  <span>·</span>
+  <a href="{% url 'profiles' 'density' %}">Profils</a>
+  <span>·</span>
+  <a href="{% url 'velocity' %}">Profils de vitesse</a>
+  <span>·</span>
+  <a href="{% url 'vectors' %}">Vecteurs</a>
+  <span>·</span>
+  <a href="{% url 'ekman' %}">Ekman</a>
+</nav>
+
+  {% if errors and errors|length %}
+    <div class="errors">
+      <strong>Erreurs :</strong>
+      <ul style="margin:6px 0 0 18px; padding:0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+<!-- Formulaire GET -->
+<form id="windForm" method="get" action="">
+  <div>
+    <label for="U10">U10 (m/s)</label>
+    <input type="number" id="U10" name="U10" step="0.1" value="{{ request.GET.U10|default:8 }}">
+  </div>
+  <div>
+    <label for="Cd">Cd</label>
+    <input type="number" id="Cd" name="Cd" step="0.0001" value="{{ request.GET.Cd|default:0.0015 }}">
+  </div>
+  <div>
+    <label for="rho_air">ρ_air (kg/m³)</label>
+    <input type="number" id="rho_air" name="rho_air" step="0.1" value="{{ request.GET.rho_air|default:1.3 }}">
+  </div>
+  <div>
+    <label for="rho_eau">ρ_eau (kg/m³)</label>
+    <input type="number" id="rho_eau" name="rho_eau" step="1" value="{{ request.GET.rho_eau|default:1025 }}">
+  </div>
+  <div>
+    <label for="Az">A<sub>z</sub> (m²/s)</label>
+    <input type="number" id="Az" name="Az" step="0.001" value="{{ request.GET.Az|default:0.01 }}">
+  </div>
+  <div>
+    <label for="wind_dir">Dir. vent (° vers)</label>
+    <input type="number" id="wind_dir" name="wind_dir" step="1" value="{{ request.GET.wind_dir|default:0 }}">
+  </div>
+  <div>
+    <label for="lat">Latitude (°)</label>
+    <input type="number" id="lat" name="lat" step="0.01" value="{{ request.GET.lat|default:42.48 }}">
+  </div>
+  <button type="submit">Mettre à jour</button>
+</form>
+
+<div class="grid">
+  <div id="windPlot"></div>
+  <div id="ekmanPlot"></div>
+</div>
+
+<div class="info" id="info"></div>
+
+    <script>
+      const params = {{ params|safe }};
+      const wind = {{ wind_vec|safe }};
+      const ekman = {{ ekman_vec|safe }};
+
+      // Conversion du courant d’Ekman en cm/s
+      const ekman_cm = {
+        x: ekman.x * 100,
+        y: ekman.y * 100,
+        speed: ekman.speed * 100
+      };
+
+      // Fonction pour créer une flèche Plotly
+      function arrow(x, y, name, color, unit = "m/s") {
+        return {
+          type: "scatter",
+          x: [0, x],
+          y: [0, y],
+          mode: "lines+markers",
+          line: { width: 3, color },
+          marker: { size: 6, color },
+          name,
+          hovertemplate: `${name}<br>Vx=%{x:.2f} ${unit}<br>Vy=%{y:.2f} ${unit}<extra></extra>`
+        };
+      }
+
+      // Échelles indépendantes
+      const axisWind = Math.ceil(wind.speed * 1.2 * 10) / 10;
+      const axisEk = Math.max(1, Math.ceil(ekman_cm.speed * 1.2 * 10) / 10);
+
+    const layoutBase = {
+      paper_bgcolor: '#ffffff',   // fond de la figure
+      plot_bgcolor:  '#ffffff',   // fond du tracé
+      xaxis: {
+        title: "",                // défini plus bas pour chaque graphe
+        gridcolor: "#e2e8f0",     // grille douce
+        zeroline: true, zerolinecolor: "#94a3b8"
+      },
+      yaxis: {
+        title: "",
+        gridcolor: "#e2e8f0",
+        zeroline: true, zerolinecolor: "#94a3b8",
+        scaleanchor: "x", scaleratio: 1
+      },
+      font: { color: "#1e293b" }, // texte foncé
+      legend:{ bgcolor:"rgba(255,255,255,0)" },
+      margin:{ l:70, r:20, t:30, b:60 }
+    };
+
+      // --- Graphe vent ---
+      const layoutWind = JSON.parse(JSON.stringify(layoutBase));
+      layoutWind.title = "Vecteur du vent (U10)";
+      layoutWind.xaxis.title = "Est (m/s)";
+      layoutWind.yaxis.title = "Nord (m/s)";
+      layoutWind.xaxis.range = [-axisWind, axisWind];
+      layoutWind.yaxis.range = [-axisWind, axisWind];
+
+      Plotly.newPlot("windPlot", [arrow(wind.x, wind.y, "Vent", "#60a5fa", "m/s")],
+        layoutWind, { responsive: true, displayModeBar: false });
+
+      // --- Graphe courant d’Ekman ---
+      const layoutEk = JSON.parse(JSON.stringify(layoutBase));
+      layoutEk.title = "Courant d’Ekman (surface)";
+      layoutEk.xaxis.title = "Est (cm/s)";
+      layoutEk.yaxis.title = "Nord (cm/s)";
+      layoutEk.xaxis.range = [-axisEk, axisEk];
+      layoutEk.yaxis.range = [-axisEk, axisEk];
+
+      Plotly.newPlot("ekmanPlot", [arrow(ekman_cm.x, ekman_cm.y, "Ekman", "#10b981", "cm/s")],
+        layoutEk, { responsive: true, displayModeBar: false });
+
+      // --- Infos calculées ---
+      const info = document.getElementById("info");
+    info.innerHTML = `
+      <span class="pill" title="Paramètre de Coriolis : f = 2·Ω·sin(latitude)">f = ${params.f.toExponential(3)} s⁻¹</span>
+      <span class="pill" title="Tension du vent : force par unité de surface exercée par le vent">T = ${params.T.toFixed(3)} N·m⁻²</span>
+      <span class="pill" title="Amplitude du courant d’Ekman de surface">V₀ = ${(params.V0 * 100).toFixed(2)} cm·s⁻¹</span>
+      <br><span style="opacity:.8">
+        HN ⇒ courant de surface dévié d’environ +45° (à droite) par rapport au vent.
+      </span>
+    `;
+    </script>
+</body>
+</html>

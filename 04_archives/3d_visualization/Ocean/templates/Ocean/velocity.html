@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Profils géostrophiques — u(z), v(z)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+  :root{
+    --bg:#f8fafc;         /* fond très clair */
+    --text:#1e293b;       /* texte principal (gris anthracite) */
+    --muted:#475569;      /* texte secondaire */
+    --link:#2563eb;       /* liens */
+    --link-hover:#1d4ed8;
+    --border:#cbd5e1;     /* bordures / cadres */
+    --card:#ffffff;       /* cartes / panneaux */
+  }
+
+  body{
+    margin:0; padding:24px;
+    background:var(--bg);
+    color:var(--text);
+    font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu;
+  }
+  h1{ margin:0 0 8px; font-size:22px; color:var(--text); }
+  .sub{ margin:0 0 12px; color:var(--muted); }
+
+  /* Menu harmonisé */
+  .nav-links{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    margin:10px 0 18px; font-size:14px; color:var(--muted);
+  }
+  .nav-links a{ color:var(--link); text-decoration:none; transition:color .2s; }
+  .nav-links a:hover{ color:var(--link-hover); text-decoration:underline; }
+  .nav-links span{ color:rgba(0,0,0,.25); user-select:none; }
+
+  /* Formulaire z_ref */
+  form#zrefForm{
+    margin:12px 0 18px;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    font-size:14px; color:var(--muted);
+  }
+  form#zrefForm input[type=number]{
+    width:80px; padding:4px 6px;
+    border:1px solid var(--border); border-radius:6px;
+    background:var(--card); color:var(--text);
+  }
+  form#zrefForm button{
+    padding:5px 10px; border:1px solid var(--border); border-radius:6px;
+    background:var(--link); color:#fff; cursor:pointer; font-weight:500;
+  }
+  form#zrefForm button:hover{ background:var(--link-hover); }
+
+  /* Alertes */
+  .errors{
+    background:#fff0f0; color:#991b1b; border:1px solid #fecaca;
+    border-radius:10px; padding:10px 12px; margin:10px 0 16px; font-size:13px;
+  }
+
+  /* Grille de 2 graphes côte à côte (responsive) */
+  .grid{
+    display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:18px;
+  }
+  @media (max-width:900px){ .grid{ grid-template-columns:1fr; } }
+
+  /* Conteneurs Plotly */
+  #uPlot, #vPlot{
+    width:100%; height:460px; margin:12vh auto 0 auto;
+    background:var(--card) !important;
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+  .btn-group { display:flex; justify-content: center; gap:8px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+  .btn { padding:6px 12px; border:1px solid #cbd5e1; border-radius:6px; background:#fff;
+         color:#1e293b; text-decoration:none; font:500 14px/1 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;
+         transition:background .15s,border-color .15s; }
+  .btn:hover { background:#f1f5f9; border-color:#94a3b8; }
+  .btn.is-primary { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .btn.is-primary:hover { background:#1d4ed8; border-color:#1d4ed8; }
+  .btn-group .label { color:#475569; font-size:14px; margin-right:4px; }
+</style>
+</head>
+<body>
+  <h1>Profils de vitesse géostrophique</h1>
+  <p class="sub">Composantes <strong>u(z)</strong> (est-ouest) et <strong>v(z)</strong> (nord-sud), exprimées en cm/s.</p>
+
+<!-- Menu principal -->
+<nav class="nav-links">
+  <a href="{% url 'coords' %}">Coordonnées</a>
+  <span>·</span>
+  <a href="{% url 'profiles' 'density' %}">Profils</a>
+  <span>·</span>
+  <a href="{% url 'velocity' %}">Profils de vitesse</a>
+  <span>·</span>
+  <a href="{% url 'vectors' %}">Vecteurs</a>
+  <span>·</span>
+  <a href="{% url 'ekman' %}">Ekman</a>
+</nav>
+
+  <form id="zrefForm" method="get" action="">
+    <label for="z_ref">Profondeur de référence (z_ref, m) :</label>
+    <input type="number" id="z_ref" name="z_ref" value="{{ z_ref|floatformat:0 }}" step="1" min="0" max="500" />
+    <button type="submit">Mettre à jour</button>
+  </form>
+
+  {% if errors and errors|length %}
+    <div class="errors">
+      <strong>Erreurs :</strong>
+      <ul style="margin:6px 0 0 18px; padding:0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+<div class="grid">
+  <div id="uPlot"></div>
+  <div id="vPlot"></div>
+</div>
+
+<div class="btn-group">
+  <a class="btn"
+     href="{% url 'export_figure' 'velocity' %}?format=png&width=1400&height=900&dpi=150&z_ref={{ z_ref }}">
+    PNG
+  </a>
+  <a class="btn"
+     href="{% url 'export_figure' 'velocity' %}?format=svg&width=1200&height=800&z_ref={{ z_ref }}">
+    SVG
+  </a>
+  <a class="btn"
+     href="{% url 'export_figure' 'velocity' %}?format=pdf&width=1200&height=800&z_ref={{ z_ref }}">
+    PDF
+  </a>
+</div>
+
+  <script>
+    const z = {{ z_json|safe }};
+    const u = {{ u_json|safe }};
+    const v = {{ v_json|safe }};
+
+    if (!z.length || !u.length || !v.length) {
+      document.body.innerHTML +=
+        '<p style="color:#94a3b8">Données indisponibles pour l’instant.</p>';
+    } else {
+      const traceU = {
+        x: u.map(val => val * 100),  // m/s → cm/s
+        y: z,
+        mode: "lines",
+        name: "u(z)",
+        line: {color:"#3b82f6", width:2},
+      };
+      const traceV = {
+        x: v.map(val => val * 100),
+        y: z,
+        mode: "lines",
+        name: "v(z)",
+        line: {color:"#10b981", width:2},
+      };
+
+      const layoutU = {
+        title: "Composante Est (u)",
+        xaxis: {title:"u (cm/s)", zeroline:true, zerolinecolor:"#666"},
+        yaxis: {title:"Profondeur (m)", autorange:"reversed"},
+        paper_bgcolor:'rgba(0,0,0,0)',
+        plot_bgcolor:'rgba(0,0,0,0)',
+        font:{color:"#1e293b"},
+        margin:{l:60, r:20, t:50, b:60}
+      };
+
+      const layoutV = {
+        title: "Composante Nord (v)",
+        xaxis: {title:"v (cm/s)", zeroline:true, zerolinecolor:"#666"},
+        yaxis: {title:"Profondeur (m)", autorange:"reversed"},
+        paper_bgcolor:'rgba(0,0,0,0)',
+        plot_bgcolor:'rgba(0,0,0,0)',
+        font:{color:"#1e293b"},
+        margin:{l:60, r:20, t:50, b:60}
+      };
+
+      Plotly.newPlot("uPlot", [traceU], layoutU, {responsive:true, displayModeBar:false});
+      Plotly.newPlot("vPlot", [traceV], layoutV, {responsive:true, displayModeBar:false});
+    }
+  </script>
+</body>
+</html>
