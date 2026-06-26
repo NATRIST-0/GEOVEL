@@ -1,6 +1,6 @@
 cd C:\Users\GAYRARD\Documents\GitHub\GEOVEL\01_code
 python -m PyQt6.uic.pyuic ui/ui_mainwindow.ui -o code/ui_mainwindow.py
-pyrcc5 resources.qrc -o resources.py
+pyrcc5 ui/resources.qrc -o code/resources.py
 
 cd C:\Users\GAYRARD\Documents\GitHub\GEOVEL\04_archives\3d_visualization
 python manage.py check

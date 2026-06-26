@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>GEOVEL</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="resources.qrc">
+    <normaloff>:/icon.ico</normaloff>:/icon.ico</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true">/* ============================================================
    GLOBAL
@@ -234,60 +238,18 @@ QScrollBar::sub-line:horizontal {
             <property name="title">
              <string>Load files</string>
             </property>
-            <layout class="QGridLayout" name="gridLayout" columnstretch="0,6,0,2,2">
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_raw_ref">
-               <property name="text">
-                <string>Sea-Bird file 1</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <layout class="QHBoxLayout" name="horizontalLayout_root">
+            <layout class="QGridLayout" name="gridLayout" columnstretch="0,0,0,0,0">
+             <item row="1" column="4">
+              <layout class="QHBoxLayout" name="horizontalLayout_7">
                <item>
-                <widget class="QLineEdit" name="lineEdit_file1"/>
-               </item>
-               <item>
-                <widget class="QPushButton" name="pushButton_browse_file1">
+                <widget class="QLabel" name="label_5">
                  <property name="text">
-                  <string>Browse</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item row="0" column="2" rowspan="4">
-              <widget class="Line" name="line">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="3">
-              <layout class="QHBoxLayout" name="horizontalLayout_3">
-               <item>
-                <widget class="QLabel" name="label">
-                 <property name="text">
-                  <string>Lat 1 (°)</string>
+                  <string>Lon 2 (°)</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QLineEdit" name="lineEdit_lat1"/>
-               </item>
-              </layout>
-             </item>
-             <item row="0" column="4">
-              <layout class="QHBoxLayout" name="horizontalLayout_8">
-               <item>
-                <widget class="QLabel" name="label_6">
-                 <property name="text">
-                  <string>Lon 1 (°)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_lon1"/>
+                <widget class="QLineEdit" name="lineEdit_lon2"/>
                </item>
               </layout>
              </item>
@@ -298,17 +260,51 @@ QScrollBar::sub-line:horizontal {
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
-              <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_raw_ref">
+               <property name="text">
+                <string>Sea-Bird file 1</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="4">
+              <layout class="QHBoxLayout" name="horizontalLayout_11">
                <item>
-                <widget class="QLineEdit" name="lineEdit_file2"/>
-               </item>
-               <item>
-                <widget class="QPushButton" name="pushButton_browse_file2">
+                <widget class="QLabel" name="label_7">
                  <property name="text">
-                  <string>Browse</string>
+                  <string>Lon 3 (°)</string>
                  </property>
                 </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_lon3"/>
+               </item>
+              </layout>
+             </item>
+             <item row="5" column="0">
+              <spacer name="verticalSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="3" column="4">
+              <layout class="QHBoxLayout" name="horizontalLayout_12">
+               <item>
+                <widget class="QLabel" name="label_8">
+                 <property name="text">
+                  <string>Lon 4 (°)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_lon4"/>
                </item>
               </layout>
              </item>
@@ -323,20 +319,6 @@ QScrollBar::sub-line:horizontal {
                </item>
                <item>
                 <widget class="QLineEdit" name="lineEdit_lat2"/>
-               </item>
-              </layout>
-             </item>
-             <item row="1" column="4">
-              <layout class="QHBoxLayout" name="horizontalLayout_7">
-               <item>
-                <widget class="QLabel" name="label_5">
-                 <property name="text">
-                  <string>Lon 2 (°)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_lon2"/>
                </item>
               </layout>
              </item>
@@ -361,41 +343,6 @@ QScrollBar::sub-line:horizontal {
                </item>
               </layout>
              </item>
-             <item row="2" column="3">
-              <layout class="QHBoxLayout" name="horizontalLayout_5">
-               <item>
-                <widget class="QLabel" name="label_3">
-                 <property name="text">
-                  <string>Lat 3 (°)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_lat3"/>
-               </item>
-              </layout>
-             </item>
-             <item row="2" column="4">
-              <layout class="QHBoxLayout" name="horizontalLayout_11">
-               <item>
-                <widget class="QLabel" name="label_7">
-                 <property name="text">
-                  <string>Lon 3 (°)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_lon3"/>
-               </item>
-              </layout>
-             </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="label_model_param_file_3">
-               <property name="text">
-                <string>Sea-Bird file 4</string>
-               </property>
-              </widget>
-             </item>
              <item row="3" column="1">
               <layout class="QHBoxLayout" name="horizontalLayout_10">
                <item>
@@ -410,62 +357,7 @@ QScrollBar::sub-line:horizontal {
                </item>
               </layout>
              </item>
-             <item row="3" column="3">
-              <layout class="QHBoxLayout" name="horizontalLayout_6">
-               <item>
-                <widget class="QLabel" name="label_4">
-                 <property name="text">
-                  <string>Lat 4 (°)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_lat4"/>
-               </item>
-              </layout>
-             </item>
-             <item row="3" column="4">
-              <layout class="QHBoxLayout" name="horizontalLayout_12">
-               <item>
-                <widget class="QLabel" name="label_8">
-                 <property name="text">
-                  <string>Lon 4 (°)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_lon4"/>
-               </item>
-              </layout>
-             </item>
-             <item row="4" column="0">
-              <widget class="QLabel" name="label_16">
-               <property name="text">
-                <string>Gradient calculation method</string>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="1" colspan="4">
-              <widget class="QComboBox" name="comboBox_grad_method">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>24</height>
-                </size>
-               </property>
-               <item>
-                <property name="text">
-                 <string>Multi-triangles</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Single u and v vector</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item row="5" column="0" colspan="5">
+             <item row="4" column="0" colspan="5">
               <widget class="QPushButton" name="pushButton_read_treat_data">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -484,18 +376,103 @@ QScrollBar::sub-line:horizontal {
                </property>
               </widget>
              </item>
-             <item row="6" column="0">
-              <spacer name="verticalSpacer">
+             <item row="3" column="0">
+              <widget class="QLabel" name="label_model_param_file_3">
+               <property name="text">
+                <string>Sea-Bird file 4</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="4">
+              <layout class="QHBoxLayout" name="horizontalLayout_8">
+               <item>
+                <widget class="QLabel" name="label_6">
+                 <property name="text">
+                  <string>Lon 1 (°)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_lon1"/>
+               </item>
+              </layout>
+             </item>
+             <item row="3" column="3">
+              <layout class="QHBoxLayout" name="horizontalLayout_6">
+               <item>
+                <widget class="QLabel" name="label_4">
+                 <property name="text">
+                  <string>Lat 4 (°)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_lat4"/>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="2" rowspan="4">
+              <widget class="Line" name="line">
                <property name="orientation">
                 <enum>Qt::Vertical</enum>
                </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
-               </property>
-              </spacer>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <layout class="QHBoxLayout" name="horizontalLayout_2">
+               <item>
+                <widget class="QLineEdit" name="lineEdit_file2"/>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_browse_file2">
+                 <property name="text">
+                  <string>Browse</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="2" column="3">
+              <layout class="QHBoxLayout" name="horizontalLayout_5">
+               <item>
+                <widget class="QLabel" name="label_3">
+                 <property name="text">
+                  <string>Lat 3 (°)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_lat3"/>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="1">
+              <layout class="QHBoxLayout" name="horizontalLayout_root">
+               <item>
+                <widget class="QLineEdit" name="lineEdit_file1"/>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_browse_file1">
+                 <property name="text">
+                  <string>Browse</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="3">
+              <layout class="QHBoxLayout" name="horizontalLayout_3">
+               <item>
+                <widget class="QLabel" name="label">
+                 <property name="text">
+                  <string>Lat 1 (°)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_lat1"/>
+               </item>
+              </layout>
              </item>
             </layout>
            </widget>
@@ -639,10 +616,10 @@ QScrollBar::sub-line:horizontal {
           <item>
            <widget class="QGroupBox" name="groupBox_model_config">
             <property name="title">
-             <string>Speed Profiles Page</string>
+             <string>GEOVEL Profiles Page</string>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_4">
-             <item>
+            <layout class="QGridLayout" name="gridLayout_2">
+             <item row="0" column="0">
               <layout class="QHBoxLayout" name="horizontalLayout_13">
                <item>
                 <widget class="QLabel" name="label_10">
@@ -656,7 +633,7 @@ QScrollBar::sub-line:horizontal {
                </item>
               </layout>
              </item>
-             <item>
+             <item row="1" column="0">
               <layout class="QHBoxLayout" name="horizontalLayout_15">
                <item>
                 <widget class="QLabel" name="label_12">
@@ -687,14 +664,44 @@ QScrollBar::sub-line:horizontal {
                </item>
               </layout>
              </item>
-             <item>
+             <item row="2" column="0">
+              <layout class="QHBoxLayout" name="horizontalLayout_19">
+               <item>
+                <widget class="QLabel" name="label_17">
+                 <property name="text">
+                  <string>GEOVEL calculation to plot</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="comboBox_method_to_plot">
+                 <item>
+                  <property name="text">
+                   <string>Isobaric method</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Isopycnal method</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Both</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="3" column="0">
               <widget class="QPushButton" name="pushButton_speed_plot">
                <property name="text">
                 <string>Create speed plot</string>
                </property>
               </widget>
              </item>
-             <item>
+             <item row="4" column="0">
               <spacer name="verticalSpacer_3">
                <property name="orientation">
                 <enum>Qt::Vertical</enum>
@@ -769,7 +776,7 @@ QScrollBar::sub-line:horizontal {
                <item>
                 <widget class="QLabel" name="label_15">
                  <property name="text">
-                  <string>Plot data from:</string>
+                  <string>GEOVEL calculation to plot</string>
                  </property>
                 </widget>
                </item>
@@ -783,27 +790,12 @@ QScrollBar::sub-line:horizontal {
                  </property>
                  <item>
                   <property name="text">
-                   <string>Average All</string>
+                   <string>Isobaric method</string>
                   </property>
                  </item>
                  <item>
                   <property name="text">
-                   <string>Triangle 1</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>Triangle 2</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>Triangle 3</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>Triangle 4</string>
+                   <string>Isopycnal method (Average)</string>
                   </property>
                  </item>
                 </widget>
@@ -974,7 +966,7 @@ QScrollBar::sub-line:horizontal {
   </action>
   <action name="actionSpeed_Profiles">
    <property name="text">
-    <string>Speed Profiles</string>
+    <string>GEOVEL Profiles</string>
    </property>
   </action>
   <action name="actionHodograph">
@@ -983,6 +975,8 @@ QScrollBar::sub-line:horizontal {
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

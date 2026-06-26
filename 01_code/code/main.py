@@ -1,8 +1,6 @@
 """GEOVEL Application
 This is the main entry point for the application.
 It initializes the PyQt6 application, creates the main window, and starts the event loop.
-
-comboBox_grad_method
 """
 
 # ========== Imports ==========
@@ -26,32 +24,16 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.data_io import read_cnv_files, derive_plane_equations, export_processed_data
+from core.data_io import read_cnv_files, compute_horizontal_gradients, export_processed_data
 from core.map_coords import draw_localization_plot
 from core.ctd_profiles import draw_ctd_profiles
 from core.derive_geovel import derive_geostrophic_velocity
 from core.velocity_profiles import draw_geovel_profiles
 from core.hodograph import draw_hodograph
 
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
-
-
-# ========== Dummy Stream ==========
-# to avoid crashes when the app tries to print to a console that doesn't exist
-class DummyStream:
-    def write(self, text):
-        pass
-
-    def flush(self):
-        pass
-
-
-if sys.stdout is None or getattr(sys.stdout, "closed", True):
-    sys.stdout = DummyStream()
-if sys.stderr is None or getattr(sys.stderr, "closed", True):
-    sys.stderr = DummyStream()
 
 
 # ========== Terminal Redirector ==========
@@ -141,7 +123,7 @@ class Worker(QThread):
                 combined_df = pd.concat(all_dfs, ignore_index=True)
 
                 # Applying the plane equations on it
-                final_df, metadata = derive_plane_equations(combined_df)
+                final_df, metadata = compute_horizontal_gradients(combined_df)
 
                 # Saving the final result
                 output_name = "combined_CTD_profiles.csv"
@@ -175,7 +157,7 @@ class MainWindow(QMainWindow):
         try:
             self.ui = Ui_MainWindow()
             self.ui.setupUi(self)
-            iconpath = str(Path(__file__).parent.parent / "resources" / "icon.ico")
+            iconpath = str(Path(__file__).parent.parent / "ui" / "icon.ico")
             self.setWindowIcon(QIcon(iconpath))
             self.ui.stackedWidget.setCurrentIndex(0)
 
@@ -459,7 +441,6 @@ class MainWindow(QMainWindow):
         self.ax = self.figure.add_subplot(111)  # Creates a fresh, untainted axis
 
         try:
-
             base_file = (
                 self.ui.lineEdit_file1.text()
                 or self.ui.lineEdit_file2.text()
@@ -471,7 +452,7 @@ class MainWindow(QMainWindow):
                 raise ValueError("No files loaded. Please load and treat data first.")
 
             csv_path = Path(base_file).parent / "combined_CTD_profiles.csv"
-            
+
             # Calling the plotting function
             draw_localization_plot(self.ax, csv_path)
 
@@ -530,6 +511,7 @@ class MainWindow(QMainWindow):
                 )
 
             level_of_no_motion = float(level_text)
+            method = self.ui.comboBox_method_to_plot.currentText()
 
             base_file = (
                 self.ui.lineEdit_file1.text()
@@ -543,8 +525,10 @@ class MainWindow(QMainWindow):
             csv_path = Path(base_file).parent / "combined_CTD_profiles.csv"
             show_avg = self.ui.checkBox_avg_T_vals.isChecked()
 
-            derive_geostrophic_velocity(csv_path, level_of_no_motion)
-            draw_geovel_profiles(self.ax, csv_path, show_avg)
+            derive_geostrophic_velocity(csv_path)
+            draw_geovel_profiles(
+                self.ax, csv_path, show_avg, method, level_of_no_motion
+            )
 
             self.canvas.draw()
             print(
@@ -590,13 +574,12 @@ class MainWindow(QMainWindow):
 
             csv_path = Path(base_file).parent / "combined_CTD_profiles.csv"
 
-            # Recalculate geostrophic velocities using the new reference level in casee it changes
-            derive_geostrophic_velocity(csv_path, level_of_no_motion)
-
             resolution_step = self.ui.spinBox_resolution.value()
             data_source = self.ui.comboBox_hodograph_from.currentText()
 
-            draw_hodograph(self.ax, csv_path, data_source, resolution_step)
+            draw_hodograph(
+                self.ax, csv_path, data_source, resolution_step, level_of_no_motion
+            )
             self.canvas.draw()
 
             print(

@@ -1,0 +1,34 @@
+
+== Seabird - Analyzing and Visualizing CTD Data
+
+Start by copying the following files to your working directory:
+- Raw data (e.g., `20090610a.hex`)
+- The configuration file (e.g., `20090610a.CON`)
+- The program setup file for the process you are about to use (e.g., `atCnv.psa`)
+
+These files can all be found in `toulouse/Seabird`. Once copied, you can process the data directly in your working directory.
+
+In the Seabird interface, you need to set up pathnames and options. To run a process (e.g., "filter"):
++ Open the `.psa` file that you have copied to your workspace: *OPEN `filter.psa`*
++ Select your input file: *SELECT `<last_file_you_worked_on>.cnv`*
++ Select the output directory: *SELECT* your workspace, append `_filter`, and keep the rest of the output filename the same as the input filename.
+
+#rect(fill: luma(245), inset: 10pt, radius: 4pt)[
+  *Note:* In each case, make sure the path name to your working file correctly points to your working directory!
+]
+
+When the setup is ready, click *START PROCESS*.
+
+Most of the processes will take a file like `myfile.cnv` and add your appendix to create, for example, `myfile_filter.cnv`. This way, you keep a different file for each stage of the process.
+
+- The first program to run is `datcnv`, which takes `myfile.hex` and creates `myfile.cnv`.
+- At any time, you can look at a file using Notepad (Right-click $->$ Open with $->$ Notepad). You can use this to edit files, too.
+
+#rect(fill: luma(245), inset: 10pt, radius: 4pt)[
+  *Important:* Do not double-click on a `.cnv` file! Windows will open it with an inappropriate program.
+]
+
+At any time, you can also use *Sea Plot* to visualize the results.
+
+#pagebreak()
+

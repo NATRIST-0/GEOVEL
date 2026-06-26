@@ -24,7 +24,7 @@ def read_cnv_files(path: Path, lat: float = None, lon: float = None) -> pd.DataF
     author: Pierre P.
     """
 
-    # --- Extraction de l'en-tête ---
+    # Extraction de l'en-tête
     header = []
     with path.open("r", encoding="latin-1", errors="ignore") as f:
         for line in f:
@@ -32,14 +32,14 @@ def read_cnv_files(path: Path, lat: float = None, lon: float = None) -> pd.DataF
             if line.startswith("*END*"):
                 break
 
-    # --- Extraction des noms de colonnes ---
+    # Extraction des noms de colonnes
     names = []
     for h in header:
         m = re.search(r"#\s*name\s*\d+\s*=\s*([^:]+):", h)
         if m:
             names.append(m.group(1).strip())
 
-    # --- Lecture du tableau de données ---
+    # Lecture du tableau de données
     df = pd.read_csv(
         path,
         sep=r"\s+",  # séparateur = espaces multiples
@@ -47,7 +47,7 @@ def read_cnv_files(path: Path, lat: float = None, lon: float = None) -> pd.DataF
         skiprows=len(header),  # saute l'entête
     )
 
-    # --- Détection des colonnes principales ---
+    # Détection des colonnes principales
     if "prdM" not in df.columns:
         raise ValueError(f"Pressure column not found in {path.name}")
 
@@ -56,7 +56,7 @@ def read_cnv_files(path: Path, lat: float = None, lon: float = None) -> pd.DataF
     sal_col = "sal00" if "sal00" in df.columns else None
     temp_col = "tv290C" if "tv290C" in df.columns else None
 
-    # --- Nettoyage + renommage cohérent ---
+    # Nettoyage + renommage cohérent
     keep_cols = [pr_col]
     rename_map = {pr_col: "pressure_dbar"}
 
@@ -75,22 +75,26 @@ def read_cnv_files(path: Path, lat: float = None, lon: float = None) -> pd.DataF
     out = df[keep_cols].dropna().copy()
     out.rename(columns=rename_map, inplace=True)
 
-    # --- Conversion pression (dbar) -> profondeur (m) ---
+    # Conversion pression (dbar) -> profondeur (m)
     out["depth_m"] = out["pressure_dbar"]
 
-    # --- Vérifie que la profondeur croît (surface -> fond) ---
+    # Calculate Specific Volume (SV = 1 / rho)
+    if "density (kg/m^3)" in out.columns:
+        out["specific_volume (m^3/kg)"] = 1 / out["density (kg/m^3)"]
+
+    # Vérifie que la profondeur croît (surface -> fond)
     if len(out) > 1 and out["depth_m"].iloc[0] > out["depth_m"].iloc[-1]:
         out = out.iloc[::-1].reset_index(drop=True)
 
-    # --- Retourne le DataFrame complet (colonnes dispo + metadata) ---
+    # Retourne le DataFrame complet (colonnes dispo + metadata)
     cols = ["depth_m"]
-    for c in ["density (kg/m^3)", "salinity (PSU)", "temperature (degC)"]:
+    for c in ["density (kg/m^3)", "specific_volume (m^3/kg)", "salinity (PSU)", "temperature (degC)"]:
         if c in out.columns:
             cols.append(c)
-
+            
     final_df = out[cols].copy()
-
-    # --- Ajout de la localisation et nom du fichier source ---
+    
+    # Ajout de la localisation et nom du fichier source
     final_df["source_file"] = path.name
     if lat is not None:
         final_df["latitude (deg)"] = lat
@@ -99,117 +103,144 @@ def read_cnv_files(path: Path, lat: float = None, lon: float = None) -> pd.DataF
 
     return final_df
 
-
-def derive_plane_equations(df: pd.DataFrame) -> tuple:
-    """
-    Calculates the horizontal density gradients (dp/dx, dp/dy) for all possible triangles of stations.
-
-    Returns:
-    - Tuple containing:
-      1. The cleaned DataFrame with density gradients appended (no repetitive metadata).
-      2. A metadata dictionary with station coordinates and triangle definitions.
-    """
-
+def compute_horizontal_gradients(df: pd.DataFrame) -> tuple:
     df = df.copy()
 
     # Define conversion factors from degrees to kilometers
-    lon_to_km = 111.320
+    # different value because the Earth is not a perfect sphere
+    lon_to_km = 111.320 
     lat_to_km = 110.574
 
     # Calculate the barycenter to use as the local origin reference
-    lat_ref = df["latitude (deg)"].mean()
-    lon_ref = df["longitude (deg)"].mean()
+    lat_ref = df['latitude (deg)'].mean()
+    lon_ref = df['longitude (deg)'].mean()
 
     # Convert geographic coordinates into a local metric Cartesian system
-    df["x_meters"] = (
-        (df["longitude (deg)"] - lon_ref)
-        * lon_to_km
-        * 1000
-        * np.cos(np.radians(lat_ref))
-    )
-    df["y_meters"] = (df["latitude (deg)"] - lat_ref) * lat_to_km * 1000
+    df['x_meters'] = (df['longitude (deg)'] - lon_ref) * lon_to_km * 1000 * np.cos(np.radians(lat_ref))
+    df['y_meters'] = (df['latitude (deg)'] - lat_ref) * lat_to_km * 1000
 
-    # Initialize the metadata dictionary
-    metadata = {"stations": {}, "triangles": {}}
+    metadata = {
+        "stations": {},
+        "triangles": {}
+    }
 
     # Extract static station metadata
-    station_meta_df = df[
-        ["source_file", "latitude (deg)", "longitude (deg)", "x_meters", "y_meters"]
-    ].drop_duplicates()
+    station_meta_df = df[['source_file', 'latitude (deg)', 'longitude (deg)', 'x_meters', 'y_meters']].drop_duplicates()
     for _, row in station_meta_df.iterrows():
-        metadata["stations"][row["source_file"]] = {
-            "latitude": row["latitude (deg)"],
-            "longitude": row["longitude (deg)"],
-            "x_meters": row["x_meters"],
-            "y_meters": row["y_meters"],
+        metadata["stations"][row['source_file']] = {
+            "latitude": row['latitude (deg)'],
+            "longitude": row['longitude (deg)'],
+            "x_meters": row['x_meters'],
+            "y_meters": row['y_meters']
         }
 
+    # Identify N, S, E, W stations dynamically (for the Isobaric cross-array)
+    north_st = station_meta_df.loc[station_meta_df['y_meters'].idxmax()]['source_file']
+    south_st = station_meta_df.loc[station_meta_df['y_meters'].idxmin()]['source_file']
+    east_st  = station_meta_df.loc[station_meta_df['x_meters'].idxmax()]['source_file']
+    west_st  = station_meta_df.loc[station_meta_df['x_meters'].idxmin()]['source_file']
+
     # Filter out data below the shallowest station to ensure all points exist at a given depth
-    min_max_depth = df.groupby("source_file")["depth_m"].max().min()
-    df_filtered = df[df["depth_m"] <= min_max_depth]
+    min_max_depth = df.groupby('source_file')['depth_m'].max().min()
+    df_filtered = df[df['depth_m'] <= min_max_depth]
 
-    # Generate all possible triangles from the available stations
-    stations = df_filtered["source_file"].unique()
+    # Generate all possible triangles from the available stations (for the Isopycnal method)
+    stations = df_filtered['source_file'].unique()
     triangles = list(combinations(stations, 3))
-
-    # Populate triangle metadata definitions
+    
+    # Populate triangle metadata
     for i, triangle_stations in enumerate(triangles):
-        t_id = f"T{i + 1}"
+        t_id = f'T{i+1}'
         metadata["triangles"][t_id] = "_".join(Path(s).stem for s in triangle_stations)
 
-    results = []
+    results_triangles = []
+    results_array = []
 
     # Iterate through each depth layer to solve the plane equations
-    for depth, group in df_filtered.groupby("depth_m"):
+    for depth, group in df_filtered.groupby('depth_m'):
         if len(group) < 3:
             continue
+            
+        # Isobaric Method: 1D Gradients via Axis Projection (SciLab Legacy)
+        sv_dict = dict(zip(group['source_file'], group['specific_volume (m^3/kg)']))
+        x_dict = dict(zip(group['source_file'], group['x_meters']))
+        y_dict = dict(zip(group['source_file'], group['y_meters']))
 
+        dsv_dy = np.nan
+        dsv_dx = np.nan
+
+        # Meridional gradient (dSV/dy) using North-South pair
+        if north_st in sv_dict and south_st in sv_dict:
+            dy = y_dict[north_st] - y_dict[south_st]
+            if dy != 0:
+                dsv_dy = (sv_dict[north_st] - sv_dict[south_st]) / dy
+
+        # Zonal gradient (dSV/dx) using East-West pair
+        if east_st in sv_dict and west_st in sv_dict:
+            dx = x_dict[east_st] - x_dict[west_st]
+            if dx != 0:
+                dsv_dx = (sv_dict[east_st] - sv_dict[west_st]) / dx
+
+        # Only append if we "successfully" calculated both 1D gradients
+        if not pd.isna(dsv_dx) and not pd.isna(dsv_dy):
+            results_array.append({
+                'depth_m': depth,
+                'dsv_dx': dsv_dx,
+                'dsv_dy': dsv_dy
+            })
+
+        # Isopycnal Method: Plane Fit for each Triangle
         for i, triangle_stations in enumerate(triangles):
-            triangle_data = group[group["source_file"].isin(triangle_stations)]
+            triangle_data = group[group['source_file'].isin(triangle_stations)]
 
             if len(triangle_data) == 3:
-                x = triangle_data["x_meters"].values
-                y = triangle_data["y_meters"].values
-                z = triangle_data["density (kg/m^3)"].values
-
+                x = triangle_data['x_meters'].values
+                y = triangle_data['y_meters'].values
+                z_rho = triangle_data['density (kg/m^3)'].values
+                
                 M = np.c_[x, y, np.ones(3)]
-
+                
                 try:
-                    coeffs = np.linalg.solve(M, z)
-                    results.append(
-                        {
-                            "depth_m": depth,
-                            "triangle_id": f"T{i + 1}",
-                            "dp_dx": coeffs[0],
-                            "dp_dy": coeffs[1],
-                        }
-                    )
+                    coeffs_rho = np.linalg.solve(M, z_rho)
+                    results_triangles.append({
+                        'depth_m': depth,
+                        'triangle_id': f'T{i+1}',
+                        'drho_dx': coeffs_rho[0],  
+                        'drho_dy': coeffs_rho[1]
+                    })
                 except np.linalg.LinAlgError:
+                    # In case points are collinear
                     pass
 
-    # Convert the results into a dataframe and pivot to align triangles side by side
-    results_df = pd.DataFrame(results)
-
-    if not results_df.empty:
-        # Pivot gradients by triangle_id
-        pivot_df = results_df.pivot(
-            index="depth_m", columns="triangle_id", values=["dp_dx", "dp_dy"]
+    # Convert the results into dataframes
+    res_tri_df = pd.DataFrame(results_triangles)
+    res_arr_df = pd.DataFrame(results_array)
+    
+    if not res_tri_df.empty:
+        # Pivot Isopycnal gradients by triangle_id
+        pivot_df = res_tri_df.pivot(
+            index='depth_m', 
+            columns='triangle_id', 
+            values=['drho_dx', 'drho_dy']
         )
-        # Flatten the multi level columns into a single string format like 'dp_dx_Ti'
-        pivot_df.columns = [f"{col[0]}_{col[1]}" for col in pivot_df.columns]
+        # Flatten the multi level columns into a single string format
+        pivot_df.columns = [f'{col[0]}_{col[1]}' for col in pivot_df.columns]
         pivot_df = pivot_df.reset_index()
 
-        # Merge the gradient columns back into the primary dataframe
-        final_df = pd.merge(df, pivot_df, on="depth_m", how="left")
+        # Merge the Isobaric array gradients
+        if not res_arr_df.empty:
+            pivot_df = pd.merge(pivot_df, res_arr_df, on='depth_m', how='left')
+
+        # Merge all gradient columns back into the primary dataframe
+        final_df = pd.merge(df, pivot_df, on='depth_m', how='left')
     else:
         final_df = df
 
     # Drop the repetitive coordinates from final_df to save massive amounts of space
-    cols_to_drop = ["latitude (deg)", "longitude (deg)", "x_meters", "y_meters"]
+    cols_to_drop = ['latitude (deg)', 'longitude (deg)', 'x_meters', 'y_meters']
     final_df = final_df.drop(columns=cols_to_drop)
 
     return final_df, metadata
-
 
 def export_processed_data(df: pd.DataFrame, metadata: dict, output_path: str):
     """
