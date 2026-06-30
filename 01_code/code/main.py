@@ -8,9 +8,9 @@ import sys
 import traceback
 import pandas as pd
 from pathlib import Path
+import resources # noqa: F401
 from ui_mainwindow import Ui_MainWindow
 
-from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor
 from PyQt6.QtWidgets import (
@@ -157,8 +157,6 @@ class MainWindow(QMainWindow):
         try:
             self.ui = Ui_MainWindow()
             self.ui.setupUi(self)
-            iconpath = str(Path(__file__).parent.parent / "ui" / "icon.ico")
-            self.setWindowIcon(QIcon(iconpath))
             self.ui.stackedWidget.setCurrentIndex(0)
 
             # Console redirection
